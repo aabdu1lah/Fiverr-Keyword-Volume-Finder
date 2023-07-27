@@ -1,4 +1,4 @@
-import gspread
+import gspread, json
 
 class Interface:
     def __init__(self, worksheet) -> None:
@@ -7,8 +7,19 @@ class Interface:
         self.worksheet = self.sheet.worksheet(worksheet)
 
         self.records = self.worksheet.get_all_records()
-        self.current_row =  2
 
+        self.file = open('tracker.json', 'r')
+        self.json = json.load(self.file)
+        self.rows = self.json[worksheet]['Row'] + 1
+        self.file.close()
+
+        self.current_row =  self.rows
+
+
+    def dump(self):
+        self.file = open('tracker.json', 'w')
+        json.dump(self.json, self.file)
+        self.file.close()
 
     def getRecordCount(self) -> int:
         return len(self.records) - 2
@@ -25,23 +36,18 @@ class Interface:
     def getKeyword(self) -> str:
         keyword = self.records[self.current_row].get('Keyword').strip()
 
-        if keyword == "" or keyword == " ":
+        if keyword == "" or keyword == " " or keyword == "//":
             keyword = self.records[self.current_row + 1].get('Keyword').strip()
 
             if keyword == "" or keyword == " ":
-                self.setCurrentRow(2)
-                return None
+                return None, None
             
             self.incrementCurrentRow()
-            return keyword
+            return keyword, self.current_row - 1
 
         self.incrementCurrentRow()
-        return keyword
-    
-
-    def getKeywordRow(self) -> int:
-        return self.current_row - 1
+        return keyword, self.current_row - 1
     
 
     def updateVolume(self, volume, row) -> None:
-        self.worksheet.update_cell(row, 2, volume)
+        self.worksheet.update_cell(row + 2, 2, volume)
